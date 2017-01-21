@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Spell checking of commit message.
+if [ "$( which aspell > /dev/null )" ] ; then
+	echo >&2 "aspell: Command not found."
+	exit 1
+fi
+# shellcheck disable=SC2034
+while read OLDREV NEWREV REFNAME
+do
+	MISSPELLED=$( git log --format=%B -n 1 "$NEWREV" | aspell list )
+	if [ -n "${MISSPELLED}" ] ; then
+		echo >&2 "Possible misspelled words in the commit message:"
+		for e in $MISSPELLED; do echo >&2 " - ${e}"; done
+		exit 1
+	fi
+done
+
+# Format checikng (ex.[add] message)
+# shellcheck disable=SC2034
+while read oldrev newrev refname
+do
+	HEAD=$( git log --format=%B -n 1 "$newrev" | head -n 1 )
+	if echo "$HEAD" \
+		| egrep -q '^\[(fix|hotfix|add|update|change|clean|disable|remove|upgrade|revert)]\s.*$' ; then
+		exit 0
+	else
+		echo >&2 "Invalid Commit message format.:"
+		echo >&2 "ex. '[(fix|hotfix|add|update|change|clean|disable|remove|upgrade|revert)] messageis'"
+		echo >&2 " - ${HEAD}"
+		exit 1
+	fi
+done
+
+
